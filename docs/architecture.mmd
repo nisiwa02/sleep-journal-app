@@ -1,0 +1,48 @@
+graph TB
+    subgraph "User Device"
+        Browser[Web Browser]
+        LocalStorage[LocalStorage<br/>Journal History]
+    end
+
+    subgraph "Google Cloud Platform"
+        subgraph "Cloud Run - Frontend"
+            Frontend[Nginx<br/>Static Files<br/>Vite + React]
+        end
+
+        subgraph "Cloud Run - Backend"
+            Backend[Fastify API<br/>Node.js]
+            RateLimit[Rate Limiter<br/>20 req/min]
+            CORS[CORS Handler]
+        end
+
+        subgraph "Vertex AI"
+            Gemini[Gemini 2.0 Flash<br/>AI Model]
+        end
+
+        subgraph "Cloud IAM"
+            SA[Service Account<br/>sleepcopilot-runner]
+        end
+
+        subgraph "Cloud Logging"
+            Logs[Structured Logs<br/>NO journal_text]
+        end
+    end
+
+    Browser -->|HTTPS| Frontend
+    Frontend -->|API Calls| Backend
+    Browser <-->|Store/Retrieve| LocalStorage
+
+    Backend --> CORS
+    Backend --> RateLimit
+    Backend -->|Authenticate| SA
+    Backend -->|Generate Feedback| Gemini
+    Backend -->|Metadata Only| Logs
+
+    SA -->|IAM: aiplatform.user| Gemini
+
+    style Frontend fill:#4285f4,color:#fff
+    style Backend fill:#4285f4,color:#fff
+    style Gemini fill:#ea4335,color:#fff
+    style LocalStorage fill:#fbbc04,color:#000
+    style Logs fill:#34a853,color:#fff
+    style SA fill:#9aa0a6,color:#fff
