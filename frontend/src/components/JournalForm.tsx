@@ -39,20 +39,20 @@ function JournalForm({ onSubmit, isLoading }: JournalFormProps) {
     <form onSubmit={handleSubmit} className="journal-form">
       <div className="form-group">
         <label htmlFor="journal">
-          今日の振り返り（最大4000文字）
+          今日の振り返り（最大1000文字）
         </label>
         <textarea
           id="journal"
           value={journalText}
           onChange={(e) => setJournalText(e.target.value)}
-          maxLength={4000}
+          maxLength={1000}
           rows={8}
           placeholder="今日はどんな一日でしたか？思いついたことを自由に書いてみてください..."
           disabled={isLoading}
           required
         />
         <div className="char-count">
-          {journalText.length} / 4000 文字
+          {journalText.length} / 1000 文字
         </div>
       </div>
 

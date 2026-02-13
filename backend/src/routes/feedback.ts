@@ -4,7 +4,7 @@ import { generateFeedback } from '../services/gemini.js';
 import { randomUUID } from 'crypto';
 
 const FeedbackRequestSchema = z.object({
-  journal_text: z.string().min(1).max(4000),
+  journal_text: z.string().min(1).max(1000),
   mood: z.number().int().min(1).max(5).optional(),
   stress: z.number().int().min(1).max(7).optional(),
   language: z.string().default('ja'),

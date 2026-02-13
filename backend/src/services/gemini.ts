@@ -9,41 +9,31 @@ const model = vertexAI.getGenerativeModel({
   model: modelName,
   generationConfig: {
     temperature: 0.7,
-    maxOutputTokens: 1024,
+    maxOutputTokens: 2048,
     topP: 0.95,
+    responseMimeType: 'application/json',
   },
 });
 
-const SYSTEM_PROMPT = `あなたは睡眠ジャーナリングの傾聴的アシスタントです。
-ユーザーの就寝前のジャーナル（日記）を受け取り、以下のJSON形式でフィードバックを返してください。
+const SYSTEM_PROMPT = `あなたは就寝前ジャーナリングの傾聴的アシスタントです。以下の形式でJSONを返してください：
 
-重要: 必ず有効なJSONのみを返してください。説明文やマークダウンは含めないでください。
-文字列内の改行は\\nでエスケープし、引用符は\\\"でエスケープしてください。
+{
+  "summary": "内容の短い要約（1-2文）",
+  "empathic_feedback": "共感的・傾聴的なフィードバック（2-3文、優しく具体的に）",
+  "tags": ["関連タグ1", "関連タグ2"],
+  "risk_score": 0.5,
+  "next_actions": ["具体的アクション1", "具体的アクション2"],
+  "safety_note": null
+}
 
-必須キー:
-- summary: 内容の短い要約（1-2文）
-- empathic_feedback: 共感的・傾聴的なフィードバック（2-3文、優しく具体的に）
-- tags: 内容に関連するタグ配列（例: ["ストレス", "仕事", "睡眠不足"]）
-- risk_score: メンタルヘルスリスクスコア（0.0〜1.0。下記ルーブリックに基づいて計算）
-- next_actions: 提案する次のアクション配列（1-3個、具体的で実行可能）
-- safety_note: 自傷他害や危機的内容を検知した場合のみ記入。それ以外はnull。
-
-メンタルヘルスリスクスコア ルーブリック:
-- 0.0-0.2: ポジティブな内容、充実感、問題なし
-- 0.3-0.4: 軽度のストレスや疲労、一時的な落ち込み
-- 0.5-0.6: 中程度のストレス、継続的な不安や睡眠問題
-- 0.7-0.8: 高いストレスレベル、著しい気分の落ち込み、日常生活への影響
-- 0.9-1.0: 深刻な状態、自傷他害の可能性、緊急対応が必要
+risk_score評価基準:
+0.0-0.2=良好, 0.3-0.4=軽度ストレス, 0.5-0.6=中程度, 0.7-0.8=高ストレス・落ち込み, 0.9-1.0=深刻
 
 フィードバック方針:
-- stress（1-7）が高い（5以上）場合: より共感的で寄り添うフィードバックを重視
-- mood（1-5）が低い（2以下）場合: 積極的介入として具体的な対処法や行動を提案
+- stress高い（5以上）→より共感的に
+- mood低い（2以下）→具体的な対処法を提案
 
-重要な制約:
-1. 医療的診断や治療指示は絶対に行わない
-2. 自傷他害の懸念がある場合、safety_noteに「緊急時は地域の相談窓口や緊急連絡先へご連絡ください」等の一般的案内を入れる
-3. フィードバックは短く、共感と次の一歩を示す
-4. 必ず有効なJSONのみを返す（マークダウンや説明文は不要）`;
+制約: 医療診断禁止。危機時のみsafety_noteに相談窓口案内。通常はnull。`;
 
 interface GeminiResponse {
   summary: string;
@@ -90,31 +80,8 @@ export async function generateFeedback(
       throw new Error('No response text from Gemini');
     }
 
-    // Extract JSON from response (handle markdown code blocks if present)
-    let jsonText = text.trim();
-
-    // Remove markdown code blocks
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```\n?/, '').replace(/\n?```$/, '');
-    }
-
-    // Try to extract JSON object if there's extra text
-    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonText = jsonMatch[0];
-    }
-
-    const parsedResponse: GeminiResponse = JSON.parse(jsonText);
-
-    // Validate required fields
-    if (!parsedResponse.summary || !parsedResponse.empathic_feedback ||
-        !Array.isArray(parsedResponse.tags) ||
-        typeof parsedResponse.risk_score !== 'number' ||
-        !Array.isArray(parsedResponse.next_actions)) {
-      throw new Error('Response missing required fields');
-    }
+    // With responseSchema, Gemini returns valid JSON matching the schema
+    const parsedResponse: GeminiResponse = JSON.parse(text.trim());
 
     return parsedResponse;
   } catch (error) {
