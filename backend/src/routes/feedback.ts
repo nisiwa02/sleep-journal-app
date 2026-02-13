@@ -30,7 +30,12 @@ export async function feedbackRoutes(fastify: FastifyInstance) {
       });
 
       // Generate feedback using Gemini
-      const feedback = await generateFeedback(body.journal_text, body.language);
+      const feedback = await generateFeedback(
+        body.journal_text,
+        body.language,
+        body.mood,
+        body.stress
+      );
 
       const duration = Date.now() - startTime;
 
